@@ -62,7 +62,7 @@ def run(projectDir, outputDir="/tmp"):
             exit(1)
         try:
             cyclesStr = find_cycles(xmlFile)
-            log.success("Success! Printing cycles. See %s for additional output." % outputDir)
+            log.success("Success! Printing cycles:")
             print(cyclesStr)
         except subprocess.CalledProcessError as cpe:
             log.error("Cycle-finding failed with %s" % cpe)
