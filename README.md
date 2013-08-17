@@ -1,6 +1,6 @@
 Cycles
 ======
-Analyzes the interitance hierarcy of some java code and identifies all cycles.
+Analyzes the interitance hierarcy of some java code and prints out all the cycles.
 
 Install
 -------
