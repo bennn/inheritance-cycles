@@ -1,0 +1,78 @@
+#!/usr/bin/env python
+"""
+    2013-07-25:
+        Given the name of a project folder:
+        - Send the project throught a modified compiler, generate xml representation of the class files
+        - Analyze the xml file, create a graph from the inheritance hierarchy
+        - Find all elementary cycles in the graph
+        - Print out the cycles. With color!
+"""
+import os, sys, subprocess
+
+from util import log
+from util.astXmlParser import AstXmlParser
+
+def compileProject(xmlFile, projectDir):
+    """
+        2013-08-17:
+            Invoke the ast visualizer, generate xml output for the file
+    """
+    cwd = os.getcwd()
+    os.chdir(projectDir)
+    numFiles = subprocess.check_output("wc -l ./argslist", shell=True).split(".")[0].strip()
+    log.note("Compiling %s files..." % numFiles)
+    out = subprocess.check_output("java -jar %s/ast-visualizer/ast-visualizer.jar @argslist > %s" % (cwd, xmlFile), shell=True)
+    os.chdir(cwd)
+    log.note("Compilation succeeded! Analyzing inheritance hierarchy...")
+
+def find_cycles(xmlFile):
+    """
+        2013-08-17
+    """
+    graph = AstXmlParser(xmlFile).getGraph()
+    cycles = graph.find_cycles()
+    output = []
+    # Pretty-print cycles
+    for cycle in graph.find_cycles():
+        for edge in cycle:
+            if edge.label != "INIT": # Ignore the label of the first edge in a cycle.
+                output.append("\033[33m ==[%s]==> \033[0m" % edge.label)
+            output.append("\033[35m%s\033[0m" % edge.dest)
+        output.append("\n")
+    return "".join(output)
+
+def run(projectDir, outputDir="/tmp"):
+    """
+        2013-08-17:
+            Compile the project, find the cycles, print diagnostics and final output
+    """
+    projectName = projectDir.split("/")[-1]
+    if not os.path.exists("%s/compile.sh" % projectDir):
+        log.error("Could not find [%s/compile.sh]. Shutting down." % projectName)
+        exit(1)
+    if not os.path.exists("%s/argslist" % projectDir):
+        log.error("Could not find [%s/argslist]. Shutting down." % projectName)
+        exit(1)
+    else:
+        xmlFile = "%s/%s.xml" % (outputDir, projectName)
+        try:
+            compileProject(xmlFile, projectDir)
+        except subprocess.CalledProcessError as cpe:
+            log.error("Compilation failed with %s" % cpe)
+            exit(1)
+        try:
+            cyclesStr = find_cycles(xmlFile)
+            log.success("Success! Printing cycles. See %s for additional output." % outputDir)
+            print(cyclesStr)
+        except subprocess.CalledProcessError as cpe:
+            log.error("Cycle-finding failed with %s" % cpe)
+            exit(1)
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Usage: analyze_cycles [-d <output-dir>] <path-to-project-root>")
+    else:
+        projectDir = sys.argv[-1]
+        options = dict(zip(sys.argv[1:-1:2], sys.argv[2:-1:2]))
+        outputDir = options.get('-d', '/tmp')
+        run(projectDir, outputDir)
