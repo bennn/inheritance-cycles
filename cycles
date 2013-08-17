@@ -30,7 +30,6 @@ def find_cycles(xmlFile):
         2013-08-17
     """
     graph = AstXmlParser(xmlFile).getGraph()
-    cycles = graph.find_cycles()
     output = []
     # Pretty-print cycles
     for cycle in graph.find_cycles():
