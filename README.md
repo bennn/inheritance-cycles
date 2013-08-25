@@ -22,6 +22,12 @@ But your .java files probably won't compile without external libraries and other
 
 To summarize, make certain that `myJavaProject/argslist` and `myJavaProject/compile.sh` and contain a list of java files you want compiled and a working call to javac using these files, respectively. Have fun.
 
+Example
+-------
+Here's the output I get running this code on the <a href="">findbugs</a> project.
+Look at all those cycles.
+![Out](./example-output.png)
+
 Licensing
 ---------
 There are some nice parts of this project, so feel free to cut and paste whatever you find useful. Project released under the beer license. 
