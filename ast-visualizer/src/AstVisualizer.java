@@ -7,6 +7,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.type.TypeMirror;
 
 import javax.tools.*;
@@ -60,35 +63,14 @@ public class AstVisualizer extends Object {
 
   /**
    * Analyze the elements within a single compilation task
+   * An element is a ???
    * @param jct
    * @param fileNode
    * @throws IOException
    */
   private static void analyzeTarget(JavacTask jct, nu.xom.Element fileNode) throws IOException {
     try {
-      nu.xom.Element elNode, nameNode, kindNode, superNode;
-      String kind;
-      List<? extends Object> supertypes;
-      TypeMirror tm;
-      for(Element el:jct.analyze()) {
-        tm = el.asType();
-        nameNode = getNameNode(tm);
-        kindNode = new nu.xom.Element("kind");
-        kind = el.getKind().toString();
-        kindNode.appendChild(kind);
-        if (kind == "PACKAGE") {
-          // 2013-07-31: Other branch would throw illegal argument exception
-          supertypes = new LinkedList<Object>();
-        } else {
-          supertypes = jct.getTypes().directSupertypes(tm);
-        }
-        superNode = getSupertypeNode(supertypes);
-        elNode = new nu.xom.Element("element");
-        elNode.appendChild(nameNode);
-        elNode.appendChild(kindNode);
-        elNode.appendChild(superNode);
-        fileNode.appendChild(elNode);
-      }
+      processElements(jct.analyze(), jct, fileNode);
     } catch (NullPointerException npe) {
       nu.xom.Element ex = new nu.xom.Element("exception");
       ex.appendChild(npe.toString());
@@ -96,6 +78,51 @@ public class AstVisualizer extends Object {
     }
     return;
   }
+  
+  private static void processElements(Iterable<? extends Element> elems, 
+		  	JavacTask jct, 
+		  	nu.xom.Element fileNode, 
+		  	String prefix) { 
+	    try {
+	      nu.xom.Element elNode, nameNode, kindNode, superNode;
+	      ElementKind kind;
+	      List<? extends Object> supertypes;
+	      TypeMirror tm;
+	      for(Element el : elems) {
+	    	  
+	    	if (el instanceof TypeElement || el instanceof TypeParameterElement) {
+	    		tm = el.asType();
+	    		nameNode = getNameNode(tm);
+	    		kindNode = new nu.xom.Element("kind");
+	    		kind = el.getKind();
+		    	kindNode.appendChild(kind.toString());
+		        
+		    	supertypes = jct.getTypes().directSupertypes(tm);
+
+		        superNode = getSupertypeNode(supertypes);
+		        elNode = new nu.xom.Element("element");
+		        elNode.appendChild(nameNode);
+		        elNode.appendChild(kindNode);
+		        elNode.appendChild(superNode);
+		        fileNode.appendChild(elNode);
+		        
+		        // Make sure we get type parameters
+		        if (el instanceof TypeElement) {
+		        	TypeElement te = (TypeElement)tm;
+		        	processElements(te.getTypeParameters(), jct, fileNode);
+		        } else if (el instanceof TypeParameterElement){
+		        }
+	    	}
+	    	// Walk children
+	        processElements(el.getEnclosedElements(), jct, fileNode);
+	      }
+	    } catch (NullPointerException npe) {
+	      nu.xom.Element ex = new nu.xom.Element("exception");
+	      ex.appendChild(npe.toString());
+	      fileNode.appendChild(ex);
+	    }
+	    return;
+	  }
 
   /** Return the list of filenames unchanged, or read in the list denoted
    * by the filename `args[0]`.
